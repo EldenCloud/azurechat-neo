@@ -67,7 +67,7 @@ export const SimilaritySearch = async (
   filter?: string
 ): Promise<ServerActionResponse<Array<DocumentSearchResponse>>> => {
   try {
-    const openai = OpenAIEmbeddingInstance();
+    const openai = await OpenAIEmbeddingInstance();
     const embeddings = await openai.embeddings.create({
       input: searchText,
       model: "",
@@ -98,6 +98,7 @@ export const SimilaritySearch = async (
       });
     }
 
+    
     return {
       status: "OK",
       response: results,
@@ -122,7 +123,7 @@ export const ExtensionSimilaritySearch = async (props: {
   indexName: string;
 }): Promise<ServerActionResponse<Array<DocumentSearchResponse>>> => {
   try {
-    const openai = OpenAIEmbeddingInstance();
+    const openai = await OpenAIEmbeddingInstance();
     const { searchText, vectors, apiKey, searchName, indexName } = props;
 
     const embeddings = await openai.embeddings.create({
@@ -320,7 +321,7 @@ export const EmbedDocuments = async (
   documents: Array<AzureSearchDocumentIndex>
 ): Promise<ServerActionResponse<Array<AzureSearchDocumentIndex>>> => {
   try {
-    const openai = OpenAIEmbeddingInstance();
+    const openai = await OpenAIEmbeddingInstance();
 
     const contentsToEmbed = documents.map((d) => d.pageContent);
 
