@@ -31,7 +31,7 @@ param storageServiceImageContainerName string
 
 param location string = resourceGroup().location
 
-param disableLocalAuth = false
+param disableLocalAuth bool= false
 
 @secure()
 param nextAuthHash string = uniqueString(newGuid())
@@ -120,6 +120,11 @@ resource webApp 'Microsoft.Web/sites@2020-06-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       appSettings: [ 
+        {
+          name: 'USE_MANAGED_IDENTITIES'
+          value: disableLocalAuth
+        }
+        
         { 
           name: 'AZURE_KEY_VAULT_NAME'
           value: keyVaultName
@@ -453,7 +458,7 @@ resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05
   name: deployment.name
   properties: {
     model: deployment.model
-    raiPolicyName: contains(deployment, 'raiPolicyName') ? deployment.raiPolicyName : null
+    /*raiPolicyName: contains(deployment, 'raiPolicyName') ? deployment.raiPolicyName : null*/
   }
   sku: contains(deployment, 'sku') ? deployment.sku : {
     name: 'Standard'
@@ -514,7 +519,9 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-05-01' = {
   tags: tags
   kind: 'StorageV2'
   sku: storageServiceSku
-  allowSharedKeyAccess: !disableLocalAuth
+  properties:{
+    allowSharedKeyAccess: !disableLocalAuth
+  }
 
   resource blobServices 'blobServices' = {
     name: 'default'
@@ -538,7 +545,7 @@ var searchServiceContributorRoleId = '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // R
 // These are only deployed if local authentication has been disabled in the parameters
 
 resource cosmosDbRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
-  name: guid(cosmosDbAccount.name, cosmosDbContributorRoleId, webApp.identity.principalId)
+  name: guid(cosmosDbAccount.id, cosmosDbContributorRoleId, 'role-assignment-cosmosDb')
   scope: cosmosDbAccount
   properties: {
     principalId: webApp.identity.principalId
@@ -547,7 +554,7 @@ resource cosmosDbRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04
 }
 
 resource cognitiveServicesRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
-  name: guid(azureopenai.name, cognitiveServicesContributorRoleId, webApp.identity.principalId)
+  name: guid(azureopenai.id, cognitiveServicesContributorRoleId, 'role-assignment-cognitiveServices')
   scope: azureopenai
   properties: {
     principalId: webApp.identity.principalId
@@ -556,7 +563,7 @@ resource cognitiveServicesRoleAssignment 'Microsoft.Authorization/roleAssignment
 }
 
 resource storageBlobDataContributorRole 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
-  name: guid(storage.name, storageBlobDataContributorRoleId, webApp.identity.principalId)
+  name: guid(storage.id, storageBlobDataContributorRoleId, 'role-assignment-storage')
   scope: storage
   properties: {
     principalId: webApp.identity.principalId
@@ -565,14 +572,13 @@ resource storageBlobDataContributorRole 'Microsoft.Authorization/roleAssignments
 }
 
 resource searchServiceContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
-  name: guid(searchService.name, searchServiceContributorRoleId, webApp.identity.principalId)
+  name: guid(searchService.id, searchServiceContributorRoleId, 'role-assignment-searchService')
   scope: searchService
   properties: {
     principalId: webApp.identity.principalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchServiceContributorRoleId)
   }
 }
-
 
 
 output url string = 'https://${webApp.properties.defaultHostName}'

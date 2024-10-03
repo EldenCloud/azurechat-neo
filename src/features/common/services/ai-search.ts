@@ -1,60 +1,63 @@
 import {
-  AzureKeyCredential,
   SearchClient,
   SearchIndexClient,
   SearchIndexerClient,
 } from "@azure/search-documents";
+import { DefaultAzureCredential, AzureCliCredential } from "@azure/identity";
+
+// Check if the app should use a managed identity
+const USE_MANAGED_IDENTITIES = process.env.USE_MANAGED_IDENTITIES === "true";
+
+const getSearchCredential = () => {
+  if (USE_MANAGED_IDENTITIES) {
+    // Return DefaultAzureCredential for managed identity
+    return new DefaultAzureCredential();
+  } else {
+    // Fall back to using the API key
+    const apiKey = process.env.AZURE_SEARCH_API_KEY;
+    if (!apiKey) {
+      throw new Error("Azure AI Search API key is not provided in environment variables.");
+    }
+    return new AzureCliCredential();
+  }
+};
 
 export const AzureAISearchCredentials = () => {
-  const apiKey = process.env.AZURE_SEARCH_API_KEY;
   const searchName = process.env.AZURE_SEARCH_NAME;
   const indexName = process.env.AZURE_SEARCH_INDEX_NAME;
 
-  if (!apiKey || !searchName || !indexName) {
+  if (!searchName || !indexName) {
     throw new Error(
       "One or more Azure AI Search environment variables are not set"
     );
   }
+  
   const endpointSuffix = process.env.AZURE_SEARCH_ENDPOINT_SUFFIX || "search.windows.net";
-
   const endpoint = `https://${searchName}.${endpointSuffix}`;
+  
   return {
-    apiKey,
     endpoint,
     indexName,
   };
 };
 
 export const AzureAISearchInstance = <T extends object>() => {
-  const { apiKey, endpoint, indexName } = AzureAISearchCredentials();
+  const { endpoint, indexName } = AzureAISearchCredentials();
+  const credential = getSearchCredential();
 
-  const searchClient = new SearchClient<T>(
-    endpoint,
-    indexName,
-    new AzureKeyCredential(apiKey)
-  );
-
-  return searchClient;
+  return new SearchClient<T>(endpoint, indexName, credential);
 };
 
 export const AzureAISearchIndexClientInstance = () => {
-  const { apiKey, endpoint } = AzureAISearchCredentials();
+  const { endpoint } = AzureAISearchCredentials();
+  const credential = getSearchCredential();
 
-  const searchClient = new SearchIndexClient(
-    endpoint,
-    new AzureKeyCredential(apiKey)
-  );
-
-  return searchClient;
+  return new SearchIndexClient(endpoint, credential);
 };
 
 export const AzureAISearchIndexerClientInstance = () => {
-  const { apiKey, endpoint } = AzureAISearchCredentials();
+  const { endpoint } = AzureAISearchCredentials();
+  const credential = getSearchCredential();
 
-  const client = new SearchIndexerClient(
-    endpoint,
-    new AzureKeyCredential(apiKey)
-  );
-
-  return client;
+  return new SearchIndexerClient(endpoint, credential);
 };
