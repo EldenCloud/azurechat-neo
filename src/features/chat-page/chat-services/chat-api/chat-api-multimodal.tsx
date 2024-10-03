@@ -12,7 +12,7 @@ export const ChatApiMultimodal = (props: {
 }): ChatCompletionStreamingRunner => {
   const { chatThread, userMessage, signal, file } = props;
 
-  const openAI = OpenAIInstance();
+  const openAI = await OpenAIInstance();
 
   return openAI.beta.chat.completions.stream(
     {
