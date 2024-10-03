@@ -31,6 +31,8 @@ param storageServiceImageContainerName string
 
 param location string = resourceGroup().location
 
+param disableLocalAuth = false
+
 @secure()
 param nextAuthHash string = uniqueString(newGuid())
 
@@ -347,6 +349,7 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = {
   kind: 'GlobalDocumentDB'
   properties: {
     databaseAccountOfferType: 'Standard'
+    disableLocalAuth: disableLocalAuth
     locations: [
       {
         locationName: location
@@ -407,6 +410,7 @@ resource formRecognizer 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   properties: {
     customSubDomainName: form_recognizer_name
     publicNetworkAccess: 'Enabled'
+    disableLocalAuth: disableLocalAuth
   }
   sku: {
     name: formRecognizerSkuName
@@ -421,6 +425,7 @@ resource searchService 'Microsoft.Search/searchServices@2022-09-01' = {
     partitionCount: 1
     publicNetworkAccess: 'enabled'
     replicaCount: 1
+    disableLocalAuth: disableLocalAuth
   }
   sku: {
     name: searchServiceSkuName
@@ -435,6 +440,7 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   properties: {
     customSubDomainName: openai_name
     publicNetworkAccess: 'Enabled'
+    disableLocalAuth: disableLocalAuth
   }
   sku: {
     name: openAiSkuName
@@ -463,6 +469,7 @@ resource azureopenaidalle 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   properties: {
     customSubDomainName: openai_dalle_name
     publicNetworkAccess: 'Enabled'
+    disableLocalAuth: disableLocalAuth
   }
   sku: {
     name: openAiSkuName
@@ -493,6 +500,7 @@ resource speechService 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   properties: {
     customSubDomainName: speech_service_name
     publicNetworkAccess: 'Enabled'
+    disableLocalAuth: disableLocalAuth
   }
   sku: {
     name: speechServiceSkuName
@@ -506,6 +514,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-05-01' = {
   tags: tags
   kind: 'StorageV2'
   sku: storageServiceSku
+  allowSharedKeyAccess: !disableLocalAuth
 
   resource blobServices 'blobServices' = {
     name: 'default'
@@ -517,5 +526,53 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-05-01' = {
     }
   }
 }
+
+
+//RBAC Roles for managed identity authentication
+
+var cosmosDbContributorRoleId = '5bd9cd88-fe45-4216-938b-f97437e15450' // Replace with actual role ID for Cosmos DB.
+var cognitiveServicesContributorRoleId = '25fbc0a9-bd7c-42a3-aa1a-3b75d497ee68' // Replace with actual role ID for Cognitive Services.
+var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Replace with actual role ID for Blob Data Contributor.
+var searchServiceContributorRoleId = '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Replace with actual role ID for Azure Search.
+
+// These are only deployed if local authentication has been disabled in the parameters
+
+resource cosmosDbRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
+  name: guid(cosmosDbAccount.name, cosmosDbContributorRoleId, webApp.identity.principalId)
+  scope: cosmosDbAccount
+  properties: {
+    principalId: webApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cosmosDbContributorRoleId)
+  }
+}
+
+resource cognitiveServicesRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
+  name: guid(azureopenai.name, cognitiveServicesContributorRoleId, webApp.identity.principalId)
+  scope: azureopenai
+  properties: {
+    principalId: webApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesContributorRoleId)
+  }
+}
+
+resource storageBlobDataContributorRole 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
+  name: guid(storage.name, storageBlobDataContributorRoleId, webApp.identity.principalId)
+  scope: storage
+  properties: {
+    principalId: webApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+  }
+}
+
+resource searchServiceContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
+  name: guid(searchService.name, searchServiceContributorRoleId, webApp.identity.principalId)
+  scope: searchService
+  properties: {
+    principalId: webApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchServiceContributorRoleId)
+  }
+}
+
+
 
 output url string = 'https://${webApp.properties.defaultHostName}'
