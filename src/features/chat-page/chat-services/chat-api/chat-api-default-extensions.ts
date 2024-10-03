@@ -64,7 +64,7 @@ async function executeCreateImage(
     return "Prompt is too long, it must be less than 4000 characters";
   }
 
-  const openAI = OpenAIDALLEInstance();
+  const openAI = await OpenAIDALLEInstance();
 
   let response;
 
