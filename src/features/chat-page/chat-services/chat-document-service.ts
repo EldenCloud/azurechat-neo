@@ -1,7 +1,7 @@
-"use strict";
-
-// Preserved imports from original code
+"use server";
 import "server-only";
+
+
 import { userHashedId } from "@/features/auth-page/helpers";
 import { HistoryContainer } from "@/features/common/services/cosmos";
 import { RevalidateCache } from "@/features/common/navigation-helpers";

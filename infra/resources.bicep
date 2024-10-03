@@ -538,10 +538,12 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-05-01' = {
 //RBAC Roles for managed identity authentication
 
 var cosmosDbContributorRoleId = '5bd9cd88-fe45-4216-938b-f97437e15450' // Replace with actual role ID for Cosmos DB.
+var cosmosDbOperatorRoleId= '230815da-be43-4aae-9cb4-875f7bd000aa'
 var cognitiveServicesContributorRoleId = '25fbc0a9-bd7c-42a3-aa1a-3b75d497ee68' // Replace with actual role ID for Cognitive Services.
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Replace with actual role ID for Blob Data Contributor.
-var searchServiceContributorRoleId = '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Replace with actual role ID for Azure Search.
-
+var searchServiceContributorRoleId = '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Replace with actual role ID for Azure Search.
+var cognitiveServicesOpenAIContributorRoleId='a001fd3d-188f-4b5d-821b-7da978bf7442'
+var searchIndexDataContributorRoleId='8ebe5a00-799e-43f5-93ac-243d3dce84a7'
 // These are only deployed if local authentication has been disabled in the parameters
 
 resource cosmosDbRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
@@ -553,12 +555,32 @@ resource cosmosDbRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04
   }
 }
 
+
+resource cosmosDbRoleAssignmentOpperator 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
+  name: guid(cosmosDbAccount.id, cosmosDbOperatorRoleId, 'role-assignment-cosmosDb')
+  scope: cosmosDbAccount
+  properties: {
+    principalId: webApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cosmosDbOperatorRoleId)
+  }
+}
+
 resource cognitiveServicesRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
   name: guid(azureopenai.id, cognitiveServicesContributorRoleId, 'role-assignment-cognitiveServices')
   scope: azureopenai
   properties: {
     principalId: webApp.identity.principalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesContributorRoleId)
+  }
+}
+
+
+resource cognitivbeServicesOpenAIcONTRIBUTORRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
+  name: guid(azureopenai.id, cognitiveServicesOpenAIContributorRoleId, 'role-assignment-cognitiveServices')
+  scope: azureopenai
+  properties: {
+    principalId: webApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesOpenAIContributorRoleId)
   }
 }
 
@@ -579,6 +601,51 @@ resource searchServiceContributorRoleAssignment 'Microsoft.Authorization/roleAss
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchServiceContributorRoleId)
   }
 }
+resource searchServiceIndexDataContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
+  name: guid(searchService.id, searchIndexDataContributorRoleId, 'role-assignment-searchService')
+  scope: searchService
+  properties: {
+    principalId: webApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchIndexDataContributorRoleId)
+  }
+}
+//Special case for cosmosdb
 
+
+@description('Name of the role definition.')
+param roleDefinitionName string = 'Azure Cosmos DB for NoSQL Data Plane Owner'
+
+
+resource definition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-05-15' = {
+  name: guid(cosmosDbAccount.id, roleDefinitionName)
+  parent: cosmosDbAccount
+  properties: {
+    roleName: roleDefinitionName
+    type: 'CustomRole'
+    assignableScopes: [
+      cosmosDbAccount.id
+    ]
+    permissions: [
+      {
+        dataActions: [
+          'Microsoft.DocumentDB/databaseAccounts/readMetadata'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*'
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*'
+        ]
+      }
+    ]
+  }
+}
+
+resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
+  name: guid(definition.id, webApp.name, cosmosDbAccount.id)
+  parent: cosmosDbAccount
+  properties: {
+    principalId: webApp.identity.principalId
+    roleDefinitionId: definition.id
+    scope: cosmosDbAccount.id
+  }
+
+}
 
 output url string = 'https://${webApp.properties.defaultHostName}'
