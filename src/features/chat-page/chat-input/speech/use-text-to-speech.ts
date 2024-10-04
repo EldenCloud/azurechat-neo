@@ -30,7 +30,12 @@ class TextToSpeech {
     const tokenObj = await GetSpeechToken();
 
     if (!tokenObj || tokenObj.error) {
-      showError(tokenObj?.errorMessage || "An unknown error occurred.");
+      showError(tokenObj?.errorMessage?.toString() || "An unknown error occurred.");
+      return;
+    }
+
+    if (!tokenObj.token || !tokenObj.region) {
+      showError("Token or region is undefined.");
       return;
     }
 

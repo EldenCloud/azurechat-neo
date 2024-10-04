@@ -21,12 +21,17 @@ class SpeechToText {
       const token = await GetSpeechToken();
 
       if (!token || token.error) {
-        showError(token?.errorMessage || "An unknown error occurred.");
+        showError(token?.errorMessage?.toString() ?? "An unknown error occurred.");
         return;
       }
 
       this.isMicrophoneReady = true;
       this.isMicrophoneUsed = true;
+
+      if (!token.token) {
+        showError("Token is undefined.");
+        return;
+      }
 
       const speechConfig = SpeechConfig.fromAuthorizationToken(
         token.token,
