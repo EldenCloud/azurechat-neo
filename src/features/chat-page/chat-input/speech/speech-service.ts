@@ -2,12 +2,15 @@
 
 import { DefaultAzureCredential } from "@azure/identity";
 
-const USE_MANAGED_IDENTITIES = process.env.USE_MANAGED_IDENTITIES === "true";
-
 export const GetSpeechToken = async () => {
-  if (
-    process.env.AZURE_SPEECH_REGION === undefined
-  ) {
+  const USE_MANAGED_IDENTITIES = process.env.USE_MANAGED_IDENTITIES === "true";
+
+  let token = "";
+  const region = process.env.AZURE_SPEECH_REGION || "";
+  let error = false;
+  let errorMessage = "";
+
+  if (region === "") {
     return {
       error: true,
       errorMessage: "Missing Azure Speech region",
@@ -16,41 +19,68 @@ export const GetSpeechToken = async () => {
     };
   }
 
-  if (!USE_MANAGED_IDENTITIES && process.env.AZURE_SPEECH_KEY === undefined) {
-    return {
-      error: true,
-      errorMessage: "Missing Azure Speech key",
-      token: "",
-      region: "",
-    };
+  if (USE_MANAGED_IDENTITIES) {
+    try {
+      const credential = new DefaultAzureCredential();
+      const tokenResponse = await credential.getToken("https://cognitiveservices.azure.com/.default");
+
+      if (!tokenResponse) {
+        throw new Error("Failed to acquire token using managed identity");
+      }
+
+      const response = await fetch(
+        `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${tokenResponse.token}`,
+          },
+          cache: "no-store",
+        }
+      );
+
+      error = response.status !== 200;
+      errorMessage = response.statusText;
+      token = await response.text();
+    } catch (err) {
+      error = true;
+      errorMessage = `Failed to retrieve token using managed identity: ${(err as Error).message}`;
+    }
+  } else {
+    if (!process.env.AZURE_SPEECH_KEY) {
+      return {
+        error: true,
+        errorMessage: "Missing Azure Speech key",
+        token: "",
+        region: "",
+      };
+    }
+
+    try {
+      const response = await fetch(
+        `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
+        {
+          method: "POST",
+          headers: {
+            "Ocp-Apim-Subscription-Key": process.env.AZURE_SPEECH_KEY,
+          },
+          cache: "no-store",
+        }
+      );
+
+      error = response.status !== 200;
+      errorMessage = response.statusText;
+      token = await response.text();
+    } catch (err) {
+      error = true;
+      errorMessage = `Failed to retrieve token using subscription key: ${(err as Error).message}`;
+    }
   }
 
-  const credential = USE_MANAGED_IDENTITIES
-    ? new DefaultAzureCredential()
-    : { key: process.env.AZURE_SPEECH_KEY };
-
-  let headers = {
-    ...(!USE_MANAGED_IDENTITIES && { "Ocp-Apim-Subscription-Key": (credential as { key: string }).key }),
-  };
-
-  const response = await fetch(
-    `https://${process.env.AZURE_SPEECH_REGION}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
-    {
-      method: "POST",
-      headers: headers,
-      cache: "no-store",
-      ...(USE_MANAGED_IDENTITIES && {
-        headers: {
-          "Authorization": `Bearer ${await (await (credential as DefaultAzureCredential).getToken("https://${process.env.AZURE_SPEECH_REGION}.api.cognitive.microsoft.com/"))?.token}`
-        }
-      })
-    }
-  );
-
   return {
-    error: response.status !== 200,
-    errorMessage: response.statusText,
-    token: await response.text(),
-    region: process.env.AZURE_SPEECH_REGION,
+    error,
+    errorMessage,
+    token,
+    region,
   };
 };
