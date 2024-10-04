@@ -18,8 +18,8 @@ class SpeechToText {
   public async startRecognition() {
     const token = await GetSpeechToken();
 
-    if (token.error) {
-      showError(token.errorMessage);
+    if (!token || token.error) {
+      showError(token?.errorMessage || "An unknown error occurred.");
       return;
     }
 
