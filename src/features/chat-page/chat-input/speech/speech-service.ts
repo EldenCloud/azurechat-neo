@@ -30,7 +30,7 @@ export const GetSpeechToken = async () => {
     : { key: process.env.AZURE_SPEECH_KEY };
 
   let headers = {
-    ...(!USE_MANAGED_IDENTITIES && { "Ocp-Apim-Subscription-Key": credential.key }),
+    ...(!USE_MANAGED_IDENTITIES && { "Ocp-Apim-Subscription-Key": (credential as { key: string }).key }),
   };
 
   const response = await fetch(
@@ -41,7 +41,7 @@ export const GetSpeechToken = async () => {
       cache: "no-store",
       ...(USE_MANAGED_IDENTITIES && {
         headers: {
-          "Authorization": `Bearer ${await credential.getToken("https://${process.env.AZURE_SPEECH_REGION}.api.cognitive.microsoft.com/")}`
+          "Authorization": `Bearer ${await (await (credential as DefaultAzureCredential).getToken("https://${process.env.AZURE_SPEECH_REGION}.api.cognitive.microsoft.com/"))?.token}`
         }
       })
     }
