@@ -9,13 +9,13 @@ import { DefaultAzureCredential } from "@azure/identity";
 // Check if the app should use a managed identity
 const USE_MANAGED_IDENTITIES = process.env.USE_MANAGED_IDENTITIES === "true";
 
+// Retrieve API Key from environment if not using managed identities
+const apiKey = !USE_MANAGED_IDENTITIES ? process.env.AZURE_SEARCH_API_KEY : undefined;
+
 const getSearchCredential = () => {
   if (USE_MANAGED_IDENTITIES) {
-    // Return DefaultAzureCredential for managed identity
     return new DefaultAzureCredential();
   } else {
-    // Fall back to using the API key
-    const apiKey = process.env.AZURE_SEARCH_API_KEY;
     if (!apiKey) {
       throw new Error("Azure AI Search API key is not provided in environment variables.");
     }
@@ -28,14 +28,12 @@ export const AzureAISearchCredentials = () => {
   const indexName = process.env.AZURE_SEARCH_INDEX_NAME;
 
   if (!searchName || !indexName) {
-    throw new Error(
-      "One or more Azure AI Search environment variables are not set"
-    );
+    throw new Error("One or more Azure AI Search environment variables are not set");
   }
-  
+
   const endpointSuffix = process.env.AZURE_SEARCH_ENDPOINT_SUFFIX || "search.windows.net";
   const endpoint = `https://${searchName}.${endpointSuffix}`;
-  
+
   return {
     endpoint,
     indexName,
