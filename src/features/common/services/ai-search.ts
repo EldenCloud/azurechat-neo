@@ -8,8 +8,8 @@ import {
 
 const USE_MANAGED_IDENTITIES = process.env.USE_MANAGED_IDENTITIES === "true";
 const credential = USE_MANAGED_IDENTITIES
-  ? new DefaultAzureCredential()
-  : new AzureKeyCredential(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY);
+? new DefaultAzureCredential()
+: new AzureKeyCredential(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY);
 
 export const AzureAISearchCredentials = () => {
   const apiKey = process.env.AZURE_SEARCH_API_KEY;
@@ -25,13 +25,14 @@ export const AzureAISearchCredentials = () => {
 
   const endpoint = `https://${searchName}.${endpointSuffix}`;
   return {
+    apiKey,
     endpoint,
     indexName,
   };
 };
 
 export const AzureAISearchInstance = <T extends object>() => {
-  const { endpoint, indexName } = AzureAISearchCredentials();
+  const { apiKey, endpoint, indexName } = AzureAISearchCredentials();
 
   const searchClient = new SearchClient<T>(
     endpoint,
@@ -43,7 +44,7 @@ export const AzureAISearchInstance = <T extends object>() => {
 };
 
 export const AzureAISearchIndexClientInstance = () => {
-  const { endpoint } = AzureAISearchCredentials();
+  const { apiKey, endpoint } = AzureAISearchCredentials();
 
   const searchClient = new SearchIndexClient(
     endpoint,
@@ -54,7 +55,7 @@ export const AzureAISearchIndexClientInstance = () => {
 };
 
 export const AzureAISearchIndexerClientInstance = () => {
-  const { endpoint } = AzureAISearchCredentials();
+  const { apiKey, endpoint } = AzureAISearchCredentials();
 
   const client = new SearchIndexerClient(
     endpoint,
