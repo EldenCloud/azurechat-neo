@@ -25,7 +25,6 @@ export const AzureAISearchCredentials = () => {
 
   const endpoint = `https://${searchName}.${endpointSuffix}`;
   return {
-    apiKey,
     endpoint,
     indexName,
   };
