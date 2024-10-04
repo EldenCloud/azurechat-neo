@@ -24,18 +24,19 @@ class FileStore {
 
     try {
       chatStore.updateLoading("file upload");
-
+      console.log("Upload File")
       formData.append("id", chatThreadId);
       const file: File | null = formData.get("file") as unknown as File;
 
       this.uploadButtonLabel = "Processing document";
+      console.log("Crack document")
       const crackingResponse = await CrackDocument(formData);
 
       if (crackingResponse.status === "OK") {
         let index = 0;
 
         const documentIndexResponses: Array<ServerActionResponse<boolean>> = [];
-
+        console.log("Index document")
         for (const doc of crackingResponse.response) {
           this.uploadButtonLabel = `Indexing document [${index + 1}]/[${
             crackingResponse.response.length
@@ -60,6 +61,7 @@ class FileStore {
           // Update state
           this.uploadButtonLabel = file.name + " loaded";
           // Update history DB with doc on chat thread
+          console.log("Create chat document")
           const response = await CreateChatDocument(file.name, chatThreadId);
 
           if (response.status === "OK") {
@@ -88,6 +90,7 @@ class FileStore {
         showError(crackingResponse.errors.map((e) => e.message).join("\n"));
       }
     } catch (error) {
+      console.error(error)
       showError("" + error);
     } finally {
       this.uploadButtonLabel = "";
