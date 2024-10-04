@@ -26,7 +26,7 @@ export const GetSpeechToken = async () => {
       console.log("Using Managed Identities")
       const credential = new DefaultAzureCredential();
       const tokenResponse = await credential.getToken("https://cognitiveservices.azure.com/.default");
-
+      console.log(tokenResponse)
       if (!tokenResponse) {
         throw new Error("Failed to acquire token using managed identity");
       }
@@ -41,7 +41,7 @@ export const GetSpeechToken = async () => {
           cache: "no-store",
         }
       );
-
+      console.log(response)
       error = response.status !== 200;
       errorMessage = response.statusText;
       token = await response.text();
