@@ -2,6 +2,7 @@ import { OpenAI } from "openai";
 import { DefaultAzureCredential } from "@azure/identity";
 
 const USE_MANAGED_IDENTITIES = process.env.USE_MANAGED_IDENTITIES === "true";
+console.log(USE_MANAGED_IDENTITIES)
 
 const getAPIKey = () => {
   const apiKey = process.env.AZURE_OPENAI_API_KEY;

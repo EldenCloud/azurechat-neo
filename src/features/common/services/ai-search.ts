@@ -49,7 +49,7 @@ export const AzureAISearchIndexClientInstance = () => {
   const searchClient = new SearchIndexClient(
     endpoint,
     credential
-  );
+  );  
 
   return searchClient;
 };
