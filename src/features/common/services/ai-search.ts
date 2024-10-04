@@ -1,9 +1,10 @@
 import {
+  AzureKeyCredential,
   SearchClient,
   SearchIndexClient,
   SearchIndexerClient,
 } from "@azure/search-documents";
-import { DefaultAzureCredential, AzureCliCredential } from "@azure/identity";
+import { DefaultAzureCredential } from "@azure/identity";
 
 // Check if the app should use a managed identity
 const USE_MANAGED_IDENTITIES = process.env.USE_MANAGED_IDENTITIES === "true";
@@ -18,7 +19,7 @@ const getSearchCredential = () => {
     if (!apiKey) {
       throw new Error("Azure AI Search API key is not provided in environment variables.");
     }
-    return new AzureCliCredential();
+    return new AzureKeyCredential(apiKey);
   }
 };
 

@@ -628,7 +628,7 @@ resource searchServiceIndexDataContributorRoleAssignment 'Microsoft.Authorizatio
 param roleDefinitionName string = 'Azure Cosmos DB for NoSQL Data Plane Owner'
 
 
-resource definition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-05-15' = {
+resource definition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-05-15'=  if (disableLocalAuth) {
   name: guid(cosmosDbAccount.id, roleDefinitionName)
   parent: cosmosDbAccount
   properties: {
@@ -649,7 +649,7 @@ resource definition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@20
   }
 }
 
-resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
+resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15'= if (disableLocalAuth) {
   name: guid(definition.id, webApp.name, cosmosDbAccount.id)
   parent: cosmosDbAccount
   properties: {
