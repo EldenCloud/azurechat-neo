@@ -16,48 +16,54 @@ class SpeechToText {
   public isMicrophoneReady: boolean = false;
 
   public async startRecognition() {
-    const token = await GetSpeechToken();
+    try {
+      console.log("Getting Token")
+      const token = await GetSpeechToken();
 
-    if (!token || token.error) {
-      showError(token?.errorMessage || "An unknown error occurred.");
-      return;
+      if (!token || token.error) {
+        showError(token?.errorMessage || "An unknown error occurred.");
+        return;
+      }
+
+      this.isMicrophoneReady = true;
+      this.isMicrophoneUsed = true;
+
+      const speechConfig = SpeechConfig.fromAuthorizationToken(
+        token.token,
+        token.region
+      );
+
+      const audioConfig = AudioConfig.fromDefaultMicrophoneInput();
+
+      const autoDetectSourceLanguageConfig =
+        AutoDetectSourceLanguageConfig.fromLanguages([
+          "en-US",
+          "zh-CN",
+          "it-IT",
+          "pt-BR",
+        ]);
+
+      const recognizer = SpeechRecognizer.FromConfig(
+        speechConfig,
+        autoDetectSourceLanguageConfig,
+        audioConfig
+      );
+
+      speechRecognizer = recognizer;
+
+      recognizer.recognizing = (s, e) => {
+        chatStore.updateInput(e.result.text);
+      };
+
+      recognizer.canceled = (s, e) => {
+        showError(e.errorDetails);
+      };
+
+      recognizer.startContinuousRecognitionAsync();
+    } catch (error) {
+      console.error(error)
+      throw error
     }
-
-    this.isMicrophoneReady = true;
-    this.isMicrophoneUsed = true;
-
-    const speechConfig = SpeechConfig.fromAuthorizationToken(
-      token.token,
-      token.region
-    );
-
-    const audioConfig = AudioConfig.fromDefaultMicrophoneInput();
-
-    const autoDetectSourceLanguageConfig =
-      AutoDetectSourceLanguageConfig.fromLanguages([
-        "en-US",
-        "zh-CN",
-        "it-IT",
-        "pt-BR",
-      ]);
-
-    const recognizer = SpeechRecognizer.FromConfig(
-      speechConfig,
-      autoDetectSourceLanguageConfig,
-      audioConfig
-    );
-
-    speechRecognizer = recognizer;
-
-    recognizer.recognizing = (s, e) => {
-      chatStore.updateInput(e.result.text);
-    };
-
-    recognizer.canceled = (s, e) => {
-      showError(e.errorDetails);
-    };
-
-    recognizer.startContinuousRecognitionAsync();
   }
 
   public stopRecognition() {
