@@ -540,6 +540,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-05-01' = {
 var cosmosDbContributorRoleId = '5bd9cd88-fe45-4216-938b-f97437e15450' // Replace with actual role ID for Cosmos DB.
 var cosmosDbOperatorRoleId= '230815da-be43-4aae-9cb4-875f7bd000aa'
 var cognitiveServicesContributorRoleId = '25fbc0a9-bd7c-42a3-aa1a-3b75d497ee68' // Replace with actual role ID for Cognitive Services.
+var cognitiveServicesUserRoleId='a97b65f3-24c7-4388-baec-2e87135dc908'
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Replace with actual role ID for Blob Data Contributor.
 var searchServiceContributorRoleId = '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Replace with actual role ID for Azure Search.
 var cognitiveServicesOpenAIContributorRoleId='a001fd3d-188f-4b5d-821b-7da978bf7442'
@@ -567,7 +568,7 @@ resource cosmosDbRoleAssignmentOpperator 'Microsoft.Authorization/roleAssignment
 
 resource cognitiveServicesRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
   name: guid(azureopenai.id, cognitiveServicesContributorRoleId, 'role-assignment-cognitiveServices')
-  scope: azureopenai
+  scope: resourceGroup()
   properties: {
     principalId: webApp.identity.principalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesContributorRoleId)
@@ -583,6 +584,17 @@ resource cognitivbeServicesOpenAIcONTRIBUTORRoleAssignment 'Microsoft.Authorizat
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesOpenAIContributorRoleId)
   }
 }
+
+resource  cognitiveServicesUserRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
+  name: guid(formRecognizer.id, cognitiveServicesUserRoleId, 'role-assignment-cognitiveServices')
+  scope:  resourceGroup()
+  properties: {
+    principalId: webApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesUserRoleId)
+  }
+}
+
+
 
 resource storageBlobDataContributorRole 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
   name: guid(storage.id, storageBlobDataContributorRoleId, 'role-assignment-storage')
