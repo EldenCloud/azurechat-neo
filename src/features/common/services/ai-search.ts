@@ -5,7 +5,12 @@ import {
   SearchIndexClient,
   SearchIndexerClient,
 } from "@azure/search-documents";
+
 const USE_MANAGED_IDENTITIES = process.env.USE_MANAGED_IDENTITIES === "true";
+const credential = USE_MANAGED_IDENTITIES
+  ? new DefaultAzureCredential()
+  : new AzureKeyCredential(process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY);
+
 export const AzureAISearchCredentials = () => {
   const apiKey = process.env.AZURE_SEARCH_API_KEY;
   const searchName = process.env.AZURE_SEARCH_NAME;
@@ -27,65 +32,35 @@ export const AzureAISearchCredentials = () => {
 };
 
 export const AzureAISearchInstance = <T extends object>() => {
-  const { apiKey, endpoint, indexName } = AzureAISearchCredentials();
-  if (USE_MANAGED_IDENTITIES) {
-    const searchClient = new SearchClient<T>(
-      endpoint,
-      indexName,
-      new DefaultAzureCredential()
-    );
-    return searchClient;
-  }
-  else {
-    const searchClient = new SearchClient<T>(
-      endpoint,
-      indexName,
-      new AzureKeyCredential(apiKey)
-    );
+  const { endpoint, indexName } = AzureAISearchCredentials();
 
-    return searchClient;
-  }
+  const searchClient = new SearchClient<T>(
+    endpoint,
+    indexName,
+    credential
+  );
 
+  return searchClient;
 };
 
 export const AzureAISearchIndexClientInstance = () => {
-  const { apiKey, endpoint } = AzureAISearchCredentials();
-  if (USE_MANAGED_IDENTITIES) {
-    const searchClient = new SearchIndexClient(
-      endpoint,
-      new DefaultAzureCredential()
-    );
-    return searchClient;
-  }
-  else {
-    const searchClient = new SearchIndexClient(
-      endpoint,
-      new AzureKeyCredential(apiKey)
-    );
+  const { endpoint } = AzureAISearchCredentials();
 
-    return searchClient;
-  }
+  const searchClient = new SearchIndexClient(
+    endpoint,
+    credential
+  );
 
+  return searchClient;
 };
 
 export const AzureAISearchIndexerClientInstance = () => {
-  const { apiKey, endpoint } = AzureAISearchCredentials();
+  const { endpoint } = AzureAISearchCredentials();
 
-  if (USE_MANAGED_IDENTITIES) {
-    const client = new SearchIndexerClient(
-      endpoint,
-      new DefaultAzureCredential()
-    );
+  const client = new SearchIndexerClient(
+    endpoint,
+    credential
+  );
 
-    return client;
-  } else {
-    const client = new SearchIndexerClient(
-      endpoint,
-      new AzureKeyCredential(apiKey)
-    );
-
-    return client;
-
-  }
-
+  return client;
 };
