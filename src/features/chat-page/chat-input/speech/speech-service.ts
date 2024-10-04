@@ -3,6 +3,8 @@
 import { DefaultAzureCredential } from "@azure/identity";
 
 export const GetSpeechToken = async () => {
+  try {
+    
   const USE_MANAGED_IDENTITIES = process.env.USE_MANAGED_IDENTITIES === "true";
 
   let token = "";
@@ -21,6 +23,7 @@ export const GetSpeechToken = async () => {
 
   if (USE_MANAGED_IDENTITIES) {
     try {
+      console.log("Using Managed Identities")
       const credential = new DefaultAzureCredential();
       const tokenResponse = await credential.getToken("https://cognitiveservices.azure.com/.default");
 
@@ -47,6 +50,7 @@ export const GetSpeechToken = async () => {
       errorMessage = `Failed to retrieve token using managed identity: ${(err as Error).message}`;
     }
   } else {
+    console.log("Using Speech key")
     if (!process.env.AZURE_SPEECH_KEY) {
       return {
         error: true,
@@ -72,6 +76,7 @@ export const GetSpeechToken = async () => {
       errorMessage = response.statusText;
       token = await response.text();
     } catch (err) {
+      console.log(err)
       error = true;
       errorMessage = `Failed to retrieve token using subscription key: ${(err as Error).message}`;
     }
@@ -83,4 +88,7 @@ export const GetSpeechToken = async () => {
     token,
     region,
   };
+  } catch (error) {
+    console.log(error)
+  }
 };
