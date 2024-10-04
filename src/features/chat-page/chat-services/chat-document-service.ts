@@ -21,6 +21,7 @@ export const CrackDocument = async (
   formData: FormData
 ): Promise<ServerActionResponse<string[]>> => {
   try {
+    console.log("Cracking document")
     const response = await EnsureIndexIsCreated();
     if (response.status === "OK") {
       const fileResponse = await LoadFile(formData);
@@ -40,7 +41,9 @@ export const CrackDocument = async (
 
     return response;
   } catch (e) {
+    console.error(e)
     return {
+     
       status: "ERROR",
       errors: [
         {
@@ -55,6 +58,7 @@ const LoadFile = async (
   formData: FormData
 ): Promise<ServerActionResponse<string[]>> => {
   try {
+    console.log("Loading File")
     const file: File | null = formData.get("file") as unknown as File;
 
     const fileSize = process.env.MAX_UPLOAD_DOCUMENT_SIZE
@@ -95,6 +99,7 @@ const LoadFile = async (
       };
     }
   } catch (e) {
+    console.error(e)
     return {
       status: "ERROR",
       errors: [
@@ -110,6 +115,7 @@ export const FindAllChatDocuments = async (
   chatThreadID: string
 ): Promise<ServerActionResponse<ChatDocumentModel[]>> => {
   try {
+    console.log("FinAllChat documents")
     const querySpec: SqlQuerySpec = {
       query:
         "SELECT * FROM root r WHERE r.type=@type AND r.chatThreadId = @threadId AND r.isDeleted=@isDeleted",
@@ -165,6 +171,7 @@ export const CreateChatDocument = async (
   chatThreadID: string
 ): Promise<ServerActionResponse<ChatDocumentModel>> => {
   try {
+    console.log("Create chat document")
     const modelToSave: ChatDocumentModel = {
       chatThreadId: chatThreadID,
       id: uniqueId(),
@@ -188,7 +195,7 @@ export const CreateChatDocument = async (
         response: resource,
       };
     }
-
+    console.error(resource)
     return {
       status: "ERROR",
       errors: [
@@ -198,6 +205,7 @@ export const CreateChatDocument = async (
       ],
     };
   } catch (e) {
+    console.error(e)
     return {
       status: "ERROR",
       errors: [
@@ -213,7 +221,7 @@ export async function ChunkDocumentWithOverlap(
   document: string
 ): Promise<string[]> {
   const chunks: string[] = [];
-
+  console.log("Chunk document with overlap")
   if (document.length <= CHUNK_SIZE) {
     // If the document is smaller than the desired chunk size, return it as a single chunk.
     chunks.push(document);
