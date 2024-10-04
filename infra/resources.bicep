@@ -505,7 +505,7 @@ resource speechService 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   properties: {
     customSubDomainName: speech_service_name
     publicNetworkAccess: 'Enabled'
-    disableLocalAuth: disableLocalAuth
+    /* TODO: disableLocalAuth: disableLocalAuth*/
   }
   sku: {
     name: speechServiceSkuName
