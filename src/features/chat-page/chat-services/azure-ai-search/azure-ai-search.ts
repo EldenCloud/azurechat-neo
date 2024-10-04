@@ -14,6 +14,7 @@ import {
   SearchClient,
   SearchIndex,
 } from "@azure/search-documents";
+import { error } from "console";
 
 export interface AzureSearchDocumentIndex {
   id: string;
@@ -304,6 +305,7 @@ export const DeleteDocuments = async (
 
     return [documentsInChatResponse];
   } catch (e) {
+    console.log(e)
     return [
       {
         status: "ERROR",
@@ -339,6 +341,7 @@ export const EmbedDocuments = async (
       response: documents,
     };
   } catch (e) {
+    console.log(e)
     return {
       status: "ERROR",
       errors: [
@@ -361,6 +364,7 @@ export const EnsureIndexIsCreated = async (): Promise<
       response: result,
     };
   } catch (e) {
+    console.log(e)
     return await CreateSearchIndex();
   }
 };
@@ -439,6 +443,7 @@ const CreateSearchIndex = async (): Promise<
       response: result,
     };
   } catch (e) {
+    console.log(e)
     return {
       status: "ERROR",
       errors: [
