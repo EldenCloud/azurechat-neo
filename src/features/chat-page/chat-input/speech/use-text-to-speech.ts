@@ -29,8 +29,8 @@ class TextToSpeech {
 
     const tokenObj = await GetSpeechToken();
 
-    if (tokenObj.error) {
-      showError(tokenObj.errorMessage);
+    if (!tokenObj || tokenObj.error) {
+      showError(tokenObj?.errorMessage || "An unknown error occurred.");
       return;
     }
 
