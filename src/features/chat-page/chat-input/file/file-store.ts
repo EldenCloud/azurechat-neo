@@ -12,6 +12,7 @@ import {
   CreateChatDocument,
 } from "../../chat-services/chat-document-service";
 import { chatStore } from "../../chat-store";
+import { Console } from "console";
 
 class FileStore {
   public uploadButtonLabel: string = "";
@@ -29,6 +30,7 @@ class FileStore {
       const file: File | null = formData.get("file") as unknown as File;
 
       this.uploadButtonLabel = "Processing document";
+      console.log("Processing document");
       const crackingResponse = await CrackDocument(formData);
 
       if (crackingResponse.status === "OK") {

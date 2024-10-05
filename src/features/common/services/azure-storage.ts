@@ -85,7 +85,8 @@ export const GetBlob = async (
     };
   } catch (error) {
     if (error instanceof RestError) {
-      if (error.statusCode === 404) {
+      const restError = error as RestError;
+      if (restError.statusCode === 404) {
         return {
           status: "NOT_FOUND",
           errors: [

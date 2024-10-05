@@ -23,6 +23,7 @@ export const CrackDocument = async (
   try {
     console.log("Cracking document")
     const response = await EnsureIndexIsCreated();
+    console.log(response)
     if (response.status === "OK") {
       const fileResponse = await LoadFile(formData);
       if (fileResponse.status === "OK") {
