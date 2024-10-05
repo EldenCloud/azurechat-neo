@@ -14,7 +14,6 @@ import {
   SearchClient,
   SearchIndex,
 } from "@azure/search-documents";
-import { error } from "console";
 
 export interface AzureSearchDocumentIndex {
   id: string;
@@ -68,8 +67,8 @@ export const SimilaritySearch = async (
   filter?: string
 ): Promise<ServerActionResponse<Array<DocumentSearchResponse>>> => {
   try {
-    const openai = await OpenAIEmbeddingInstance();
-    const embeddings = await openai.embeddings.create({
+    const openai = OpenAIEmbeddingInstance();
+    const embeddings = await (await openai).embeddings.create({
       input: searchText,
       model: "",
     });
@@ -99,7 +98,6 @@ export const SimilaritySearch = async (
       });
     }
 
-    
     return {
       status: "OK",
       response: results,
@@ -124,10 +122,10 @@ export const ExtensionSimilaritySearch = async (props: {
   indexName: string;
 }): Promise<ServerActionResponse<Array<DocumentSearchResponse>>> => {
   try {
-    const openai = await OpenAIEmbeddingInstance();
+    const openai = OpenAIEmbeddingInstance();
     const { searchText, vectors, apiKey, searchName, indexName } = props;
 
-    const embeddings = await openai.embeddings.create({
+    const embeddings = await (await openai).embeddings.create({
       input: searchText,
       model: "",
     });
@@ -305,7 +303,6 @@ export const DeleteDocuments = async (
 
     return [documentsInChatResponse];
   } catch (e) {
-    console.log(e)
     return [
       {
         status: "ERROR",
@@ -323,11 +320,11 @@ export const EmbedDocuments = async (
   documents: Array<AzureSearchDocumentIndex>
 ): Promise<ServerActionResponse<Array<AzureSearchDocumentIndex>>> => {
   try {
-    const openai = await OpenAIEmbeddingInstance();
+    const openai = OpenAIEmbeddingInstance();
 
     const contentsToEmbed = documents.map((d) => d.pageContent);
 
-    const embeddings = await openai.embeddings.create({
+    const embeddings = await (await openai).embeddings.create({
       input: contentsToEmbed,
       model: process.env.AZURE_OPENAI_API_EMBEDDINGS_DEPLOYMENT_NAME,
     });
@@ -341,7 +338,6 @@ export const EmbedDocuments = async (
       response: documents,
     };
   } catch (e) {
-    console.log(e)
     return {
       status: "ERROR",
       errors: [
@@ -364,7 +360,6 @@ export const EnsureIndexIsCreated = async (): Promise<
       response: result,
     };
   } catch (e) {
-    console.log(e)
     return await CreateSearchIndex();
   }
 };
@@ -443,7 +438,6 @@ const CreateSearchIndex = async (): Promise<
       response: result,
     };
   } catch (e) {
-    console.log(e)
     return {
       status: "ERROR",
       errors: [

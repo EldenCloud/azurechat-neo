@@ -135,7 +135,7 @@ resource webApp 'Microsoft.Web/sites@2020-06-01' = {
         }
         {
           name: 'AZURE_OPENAI_API_KEY'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_OPENAI_API_KEY.name})'
+          value:  disableLocalAuth ? '' :'@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_OPENAI_API_KEY.name})'
         }
         {
           name: 'AZURE_OPENAI_API_INSTANCE_NAME'
@@ -261,7 +261,7 @@ resource kvFunctionAppPermissions 'Microsoft.Authorization/roleAssignments@2020-
   name: guid(kv.id, webApp.name, keyVaultSecretsOfficerRole)
   scope: kv
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     principalType: 'ServicePrincipal'
     roleDefinitionId: keyVaultSecretsOfficerRole
   }
@@ -545,13 +545,15 @@ var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' //
 var searchServiceContributorRoleId = '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Replace with actual role ID for Azure Search.
 var cognitiveServicesOpenAIContributorRoleId='a001fd3d-188f-4b5d-821b-7da978bf7442'
 var searchIndexDataContributorRoleId='8ebe5a00-799e-43f5-93ac-243d3dce84a7'
+
+var targetUserPrincipal = webApp.identity.principalId
 // These are only deployed if local authentication has been disabled in the parameters
 
 resource cosmosDbRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = if (disableLocalAuth) {
   name: guid(cosmosDbAccount.id, cosmosDbContributorRoleId, 'role-assignment-cosmosDb')
   scope: cosmosDbAccount
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cosmosDbContributorRoleId)
   }
 }
@@ -561,7 +563,7 @@ resource cosmosDbRoleAssignmentOpperator 'Microsoft.Authorization/roleAssignment
   name: guid(cosmosDbAccount.id, cosmosDbOperatorRoleId, 'role-assignment-cosmosDb')
   scope: cosmosDbAccount
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cosmosDbOperatorRoleId)
   }
 }
@@ -570,7 +572,7 @@ resource cognitiveServicesRoleAssignment 'Microsoft.Authorization/roleAssignment
   name: guid(azureopenai.id, cognitiveServicesContributorRoleId, 'role-assignment-cognitiveServices')
   scope: resourceGroup()
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesContributorRoleId)
   }
 }
@@ -580,7 +582,7 @@ resource cognitivbeServicesOpenAIcONTRIBUTORRoleAssignment 'Microsoft.Authorizat
   name: guid(azureopenai.id, cognitiveServicesOpenAIContributorRoleId, 'role-assignment-cognitiveServices')
   scope: azureopenai
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesOpenAIContributorRoleId)
   }
 }
@@ -589,7 +591,7 @@ resource  cognitiveServicesUserRoleAssignment 'Microsoft.Authorization/roleAssig
   name: guid(formRecognizer.id, cognitiveServicesUserRoleId, 'role-assignment-cognitiveServices')
   scope:  resourceGroup()
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesUserRoleId)
   }
 }
@@ -600,7 +602,7 @@ resource storageBlobDataContributorRole 'Microsoft.Authorization/roleAssignments
   name: guid(storage.id, storageBlobDataContributorRoleId, 'role-assignment-storage')
   scope: storage
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
   }
 }
@@ -609,7 +611,7 @@ resource searchServiceContributorRoleAssignment 'Microsoft.Authorization/roleAss
   name: guid(searchService.id, searchServiceContributorRoleId, 'role-assignment-searchService')
   scope: searchService
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchServiceContributorRoleId)
   }
 }
@@ -617,7 +619,7 @@ resource searchServiceIndexDataContributorRoleAssignment 'Microsoft.Authorizatio
   name: guid(searchService.id, searchIndexDataContributorRoleId, 'role-assignment-searchService')
   scope: searchService
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', searchIndexDataContributorRoleId)
   }
 }
@@ -653,7 +655,7 @@ resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@20
   name: guid(definition.id, webApp.name, cosmosDbAccount.id)
   parent: cosmosDbAccount
   properties: {
-    principalId: webApp.identity.principalId
+    principalId: targetUserPrincipal
     roleDefinitionId: definition.id
     scope: cosmosDbAccount.id
   }

@@ -64,12 +64,12 @@ async function executeCreateImage(
     return "Prompt is too long, it must be less than 4000 characters";
   }
 
-  const openAI = await OpenAIDALLEInstance();
+  const openAI = OpenAIDALLEInstance();
 
   let response;
 
   try {
-    response = await openAI.images.generate(
+    response = await (await openAI).images.generate(
       {
         model: "dall-e-3",
         prompt: userMessage,
