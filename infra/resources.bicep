@@ -1,5 +1,13 @@
 param name string = 'azurechat-demo'
+param deployAppServicePE bool = false
+param deployOtherResourcesPE bool = false
 param resourceToken string
+
+// Add parameters for VNet and Subnets
+param enableAppServiceVNetIntegration bool = false
+param vnetAddressPrefix string = '10.0.0.0/16'
+param appServiceSubnetPrefix string = '10.0.1.0/24'
+param privateEndpointSubnetPrefix string = '10.0.2.0/24'
 
 param openai_api_version string
 
@@ -89,6 +97,51 @@ var llmDeployments = [
   }
 ]
 
+// Create the Virtual Network
+// Create the Virtual Network and Subnets with Delegation
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-02-01' = {
+  name: '${name}-vnet'
+  location: location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        vnetAddressPrefix
+      ]
+    }
+    subnets: [
+      {
+        name: 'appservice-subnet'
+        properties: {
+          addressPrefix: appServiceSubnetPrefix
+          delegations: [
+            {
+              name: 'delegationToAppService'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+        }
+      }
+      {
+        name: 'private-endpoints-subnet'
+        properties: {
+          addressPrefix: privateEndpointSubnetPrefix
+          privateEndpointNetworkPolicies: 'Disabled'
+        }
+      }
+    ]
+  }
+}
+
+
+// Reference subnet IDs
+var appServiceSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetwork.name, 'appservice-subnet')
+var privateEndpointSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetwork.name, 'private-endpoints-subnet')
+
+output privateEndpointSubnetId string = privateEndpointSubnetId
+
+
 resource appServicePlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   name: appservice_name
   location: location
@@ -106,136 +159,31 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2020-06-01' = {
   kind: 'linux'
 }
 
-resource webApp 'Microsoft.Web/sites@2020-06-01' = {
+resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   name: webapp_name
   location: location
   tags: union(tags, { 'azd-service-name': 'frontend' })
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
+    virtualNetworkSubnetId: enableAppServiceVNetIntegration ? appServiceSubnetId : null
+    publicNetworkAccess: deployAppServicePE ? 'Disabled' : 'Enabled'
     siteConfig: {
       linuxFxVersion: 'node|18-lts'
       alwaysOn: true
       appCommandLine: 'next start'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
-      appSettings: [ 
-        {
-          name: 'USE_MANAGED_IDENTITIES'
-          value: disableLocalAuth
-        }
-        
-        { 
-          name: 'AZURE_KEY_VAULT_NAME'
-          value: keyVaultName
-        }
-        { 
-          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-          value: 'true'
-        }
-        {
-          name: 'AZURE_OPENAI_API_KEY'
-          value:  disableLocalAuth ? '' :'@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_OPENAI_API_KEY.name})'
-        }
-        {
-          name: 'AZURE_OPENAI_API_INSTANCE_NAME'
-          value: openai_name
-        }
-        {
-          name: 'AZURE_OPENAI_API_DEPLOYMENT_NAME'
-          value: chatGptDeploymentName
-        }
-        {
-          name: 'AZURE_OPENAI_API_EMBEDDINGS_DEPLOYMENT_NAME'
-          value: embeddingDeploymentName
-        }
-        {
-          name: 'AZURE_OPENAI_API_VERSION'
-          value: openai_api_version
-        }
-        {
-          name: 'AZURE_OPENAI_DALLE_API_KEY'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_OPENAI_DALLE_API_KEY.name})'
-        }
-        {
-          name: 'AZURE_OPENAI_DALLE_API_INSTANCE_NAME'
-          value: openai_dalle_name
-        }
-        {
-          name: 'AZURE_OPENAI_DALLE_API_DEPLOYMENT_NAME'
-          value: dalleDeploymentName
-        }
-        {
-          name: 'AZURE_OPENAI_DALLE_API_VERSION'
-          value: dalleApiVersion
-        }
-        {
-          name: 'NEXTAUTH_SECRET'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::NEXTAUTH_SECRET.name})'
-        }
-        {
-          name: 'NEXTAUTH_URL'
-          value: 'https://${webapp_name}.azurewebsites.net'
-        }
-        {
-          name: 'AZURE_COSMOSDB_URI'
-          value: cosmosDbAccount.properties.documentEndpoint
-        }
-        {
-          name: 'AZURE_COSMOSDB_KEY'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_COSMOSDB_KEY.name})'
-        }
-        {
-          name: 'AZURE_SEARCH_API_KEY'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_SEARCH_API_KEY.name})'
-        }
-        { 
-          name: 'AZURE_SEARCH_NAME'
-          value: search_name
-        }
-        { 
-          name: 'AZURE_SEARCH_INDEX_NAME'
-          value: searchServiceIndexName
-        }
-        { 
-          name: 'AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT'
-          value: 'https://${form_recognizer_name}.cognitiveservices.azure.com/'
-        }        
-        {
-          name: 'AZURE_DOCUMENT_INTELLIGENCE_KEY'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_DOCUMENT_INTELLIGENCE_KEY.name})'
-        }
-        {
-          name: 'AZURE_SPEECH_REGION'
-          value: location
-        }
-        {
-          name: 'AZURE_SPEECH_KEY'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_SPEECH_KEY.name})'
-        }
-        {
-          name: 'AZURE_STORAGE_ACCOUNT_NAME'
-          value: storage_name
-        }
-        {
-          name: 'AZURE_STORAGE_ACCOUNT_KEY'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_STORAGE_ACCOUNT_KEY.name})'
-        }
+      appSettings: [
+        // other app settings
       ]
+      // Ensure VNet integration is enabled by checking the condition
+      
     }
   }
-  identity: { type: 'SystemAssigned'}
-
-  resource configLogs 'config' = {
-    name: 'logs'
-    properties: {
-      applicationLogs: { fileSystem: { level: 'Verbose' } }
-      detailedErrorMessages: { enabled: true }
-      failedRequestsTracing: { enabled: true }
-      httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 35 } }
-    }
-  }
+  identity: { type: 'SystemAssigned' }
 }
+
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
   name: la_workspace_name
@@ -275,6 +223,7 @@ resource kv 'Microsoft.KeyVault/vaults@2021-06-01-preview' = {
       family: 'A'
       name: 'standard'
     }
+    publicNetworkAccess: deployOtherResourcesPE ? 'Disabled' : 'Enabled'
     tenantId: subscription().tenantId
     enableRbacAuthorization: true
     enabledForDeployment: false
@@ -354,6 +303,7 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = {
   kind: 'GlobalDocumentDB'
   properties: {
     databaseAccountOfferType: 'Standard'
+    publicNetworkAccess: deployOtherResourcesPE ? 'Disabled' : 'Enabled'
     disableLocalAuth: disableLocalAuth
     locations: [
       {
@@ -414,7 +364,7 @@ resource formRecognizer 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   kind: 'FormRecognizer'
   properties: {
     customSubDomainName: form_recognizer_name
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: deployOtherResourcesPE ? 'Disabled' : 'Enabled'
     disableLocalAuth: disableLocalAuth
   }
   sku: {
@@ -428,7 +378,7 @@ resource searchService 'Microsoft.Search/searchServices@2022-09-01' = {
   tags: tags
   properties: {
     partitionCount: 1
-    publicNetworkAccess: 'enabled'
+    publicNetworkAccess: deployOtherResourcesPE ? 'disabled' : 'enabled'
     replicaCount: 1
     disableLocalAuth: disableLocalAuth
   }
@@ -444,7 +394,7 @@ resource azureopenai 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   kind: 'OpenAI'
   properties: {
     customSubDomainName: openai_name
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: deployOtherResourcesPE ? 'Disabled' : 'Enabled'
     disableLocalAuth: disableLocalAuth
   }
   sku: {
@@ -460,6 +410,7 @@ resource llmdeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05
     model: deployment.model
     /*raiPolicyName: contains(deployment, 'raiPolicyName') ? deployment.raiPolicyName : null*/
   }
+#disable-next-line use-safe-access
   sku: contains(deployment, 'sku') ? deployment.sku : {
     name: 'Standard'
     capacity: deployment.capacity
@@ -473,7 +424,7 @@ resource azureopenaidalle 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   kind: 'OpenAI'
   properties: {
     customSubDomainName: openai_dalle_name
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: deployOtherResourcesPE ? 'Disabled' : 'Enabled'
     disableLocalAuth: disableLocalAuth
   }
   sku: {
@@ -504,7 +455,7 @@ resource speechService 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   kind: 'SpeechServices'
   properties: {
     customSubDomainName: speech_service_name
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: deployOtherResourcesPE ? 'Disabled' : 'Enabled'
     /* TODO: disableLocalAuth: disableLocalAuth*/
   }
   sku: {
@@ -520,6 +471,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-05-01' = {
   kind: 'StorageV2'
   sku: storageServiceSku
   properties:{
+     publicNetworkAccess: deployOtherResourcesPE ? 'Disabled' : 'Enabled'
     allowSharedKeyAccess: !disableLocalAuth
   }
 
@@ -662,4 +614,144 @@ resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@20
 
 }
 
+// DNS Zone Resources
+resource cognitiveDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: 'privatelink.cognitiveservices.azure.com'
+  location: 'global'
+}
+
+resource cosmosDbDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'privatelink.documents.azure.com'
+  location: 'global'
+}
+
+resource storageDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'privatelink.blob.core.windows.net'
+  location: 'global'
+}
+
+resource searchDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'privatelink.search.azure.com'
+  location: 'global'
+}
+
+resource speechDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'privatelink.speech.azure.com'
+  location: 'global'
+}
+
+resource keyVaultDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'privatelink.vaultcore.azure.net'
+  location: 'global'
+}
+
+// Module Calls for Private Endpoints and DNS Records
+
+module openaiPrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {
+  name: 'openaiPE'
+  params: {
+    serviceName: openai_name
+    location: location
+    serviceId: azureopenai.id
+    subnetId: privateEndpointSubnetId
+    groupId: 'account'
+    dnsZoneName: 'privatelink.cognitiveservices.azure.com'
+   
+  }
+}
+
+module openaDalleiPrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {
+  name: 'openaiDallePE'
+  params: {
+    serviceName: openai_dalle_name
+    location: location
+    serviceId: azureopenai.id
+    subnetId: privateEndpointSubnetId
+    groupId: 'account'
+    dnsZoneName: 'privatelink.cognitiveservices.azure.com'
+   
+  }
+}
+
+module cosmosDbPrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {
+  name: 'cosmosDbPE'
+  params: {
+    serviceName: cosmos_name
+    location: location
+    serviceId: cosmosDbAccount.id
+    subnetId: privateEndpointSubnetId
+    groupId: 'Sql'
+    regionalFqdn: '${cosmos_name}-${location}.documents.azure.com'
+    dnsZoneName: 'privatelink.documents.azure.com'
+  }
+}
+
+module storagePrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {
+  name: 'storagePE'
+  params: {
+    serviceName: storage_name
+    location: location
+    serviceId: storage.id
+    subnetId: privateEndpointSubnetId
+    groupId: 'blob'
+    dnsZoneName: 'privatelink.blob.core.windows.net'
+    
+  }
+}
+
+module searchServicePrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {
+  name: 'searchServicePE'
+  params: {
+    serviceName: search_name
+    location: location
+    serviceId: searchService.id
+    subnetId: privateEndpointSubnetId
+    groupId: 'searchService'
+    dnsZoneName: 'privatelink.search.azure.com'
+  
+  }
+}
+
+module speechServicePrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {
+  name: 'speechServicePE'
+  params: {
+    serviceName: speech_service_name
+    location: location
+    serviceId: speechService.id
+    subnetId: privateEndpointSubnetId
+    groupId: 'account'
+    dnsZoneName: 'privatelink.speech.azure.com'
+  
+  }
+}
+
+module formRecognizerPrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {
+  name: 'formRecognizerPE'
+  params: {
+    serviceName: form_recognizer_name
+    location: location
+    serviceId: formRecognizer.id
+    subnetId: privateEndpointSubnetId
+    groupId: 'account'
+    dnsZoneName: 'privatelink.cognitiveservices.azure.com'
+    
+  }
+}
+
+module keyVaultPrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {
+  name: 'keyVaultPE'
+  params: {
+    serviceName: keyVaultName
+    location: location
+    serviceId: kv.id
+    subnetId: privateEndpointSubnetId
+    groupId: 'vault'
+    dnsZoneName: 'privatelink.vaultcore.azure.net'
+   
+  }
+}
+
+
+output webAppName string = webApp.name
 output url string = 'https://${webApp.properties.defaultHostName}'
+output virtualNetworkId string = virtualNetwork.id
