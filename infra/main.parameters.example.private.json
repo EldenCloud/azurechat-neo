@@ -1,0 +1,90 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "value": "neo4"
+        },
+        "location": {
+            "value": "australiaeast"
+        },
+        "openAILocation": {
+            "value": "australiaeast"
+        },
+        "openAISku": {
+            "value": "S0"
+        },
+        "openAIApiVersion": {
+            "value": "2024-02-15-preview"
+        },
+        "chatGptDeploymentCapacity": {
+            "value": 30
+        },
+        "chatGptDeploymentName": {
+            "value": "gpt-4o"
+        },
+        "chatGptModelName": {
+            "value": "gpt-4o"
+        },
+        "chatGptModelVersion": {
+            "value": "2024-05-13"
+        },
+        "embeddingDeploymentName": {
+            "value": "embedding"
+        },
+        "embeddingDeploymentCapacity": {
+            "value": 120
+        },
+        "embeddingModelName": {
+            "value": "text-embedding-ada-002"
+        },
+        "dalleLocation": {
+            "value": "australiaeast"
+        },
+        "dalleDeploymentCapacity": {
+            "value": 1
+        },
+        "dalleDeploymentName": {
+            "value": "dall-e-3"
+        },
+        "dalleModelName": {
+            "value": "dall-e-3"
+        },
+        "dalleApiVersion": {
+            "value": "2023-12-01-preview"
+        },
+        "formRecognizerSkuName": {
+            "value": "S0"
+        },
+        "searchServiceIndexName": {
+            "value": "azure-chat"
+        },
+        "searchServiceSkuName": {
+            "value": "standard"
+        },
+        "storageServiceSku": {
+            "value": {
+                "name": "Standard_LRS"
+            }
+        },
+        "storageServiceImageContainerName": {
+            "value": "images"
+        },
+        "resourceGroupName": {
+            "value": "rg-neo4-azure-chat"
+        },
+        "disableLocalAuth": {
+            "value": true
+        },
+        "enableAppServiceVNetIntegration": {
+            "value": true
+        },
+        "deployAppServicePrivateEndpoint": {
+            "value": false
+        },
+        "deployOtherResourcesPrivateEndpoints": {
+            "value": true
+        }
+        
+    }
+}
