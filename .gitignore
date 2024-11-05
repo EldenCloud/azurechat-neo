@@ -36,3 +36,5 @@ next-env.d.ts
 infra/aad_setup.sh
 .vscode
 infra/main.parameters.example.json
+*parameters*.json
+infra/main.parameters.example.private.json
