@@ -174,8 +174,108 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
       appCommandLine: 'next start'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
-      appSettings: [
-        // other app settings
+      appSettings: [ 
+        {
+          name: 'USE_MANAGED_IDENTITIES'
+          value: disableLocalAuth
+        }
+        
+        { 
+          name: 'AZURE_KEY_VAULT_NAME'
+          value: keyVaultName
+        }
+        { 
+          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+          value: 'true'
+        }
+        {
+          name: 'AZURE_OPENAI_API_KEY'
+          value:  disableLocalAuth ? '' :'@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_OPENAI_API_KEY.name})'
+        }
+        {
+          name: 'AZURE_OPENAI_API_INSTANCE_NAME'
+          value: openai_name
+        }
+        {
+          name: 'AZURE_OPENAI_API_DEPLOYMENT_NAME'
+          value: chatGptDeploymentName
+        }
+        {
+          name: 'AZURE_OPENAI_API_EMBEDDINGS_DEPLOYMENT_NAME'
+          value: embeddingDeploymentName
+        }
+        {
+          name: 'AZURE_OPENAI_API_VERSION'
+          value: openai_api_version
+        }
+        {
+          name: 'AZURE_OPENAI_DALLE_API_KEY'
+          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_OPENAI_DALLE_API_KEY.name})'
+        }
+        {
+          name: 'AZURE_OPENAI_DALLE_API_INSTANCE_NAME'
+          value: openai_dalle_name
+        }
+        {
+          name: 'AZURE_OPENAI_DALLE_API_DEPLOYMENT_NAME'
+          value: dalleDeploymentName
+        }
+        {
+          name: 'AZURE_OPENAI_DALLE_API_VERSION'
+          value: dalleApiVersion
+        }
+        {
+          name: 'NEXTAUTH_SECRET'
+          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::NEXTAUTH_SECRET.name})'
+        }
+        {
+          name: 'NEXTAUTH_URL'
+          value: 'https://${webapp_name}.azurewebsites.net'
+        }
+        {
+          name: 'AZURE_COSMOSDB_URI'
+          value: cosmosDbAccount.properties.documentEndpoint
+        }
+        {
+          name: 'AZURE_COSMOSDB_KEY'
+          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_COSMOSDB_KEY.name})'
+        }
+        {
+          name: 'AZURE_SEARCH_API_KEY'
+          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_SEARCH_API_KEY.name})'
+        }
+        { 
+          name: 'AZURE_SEARCH_NAME'
+          value: search_name
+        }
+        { 
+          name: 'AZURE_SEARCH_INDEX_NAME'
+          value: searchServiceIndexName
+        }
+        { 
+          name: 'AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT'
+          value: 'https://${form_recognizer_name}.cognitiveservices.azure.com/'
+        }        
+        {
+          name: 'AZURE_DOCUMENT_INTELLIGENCE_KEY'
+          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_DOCUMENT_INTELLIGENCE_KEY.name})'
+        }
+        {
+          name: 'AZURE_SPEECH_REGION'
+          value: location
+        }
+        {
+          name: 'AZURE_SPEECH_KEY'
+          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_SPEECH_KEY.name})'
+        }
+        {
+          name: 'AZURE_STORAGE_ACCOUNT_NAME'
+          value: storage_name
+        }
+        {
+          name: 'AZURE_STORAGE_ACCOUNT_KEY'
+          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=${kv::AZURE_STORAGE_ACCOUNT_KEY.name})'
+        }
       ]
       // Ensure VNet integration is enabled by checking the condition
       
@@ -614,10 +714,25 @@ resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@20
 
 }
 
+var virtualNetworkId= virtualNetwork.id
+
 // DNS Zone Resources
-resource cognitiveDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+resource cognitiveDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' =  if (deployOtherResourcesPE){
   name: 'privatelink.cognitiveservices.azure.com'
   location: 'global'
+}
+
+// VNet Link for Cognitive DNS Zone
+resource cognitiveDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' =  if (deployOtherResourcesPE){
+  name: 'cognitive-dns-vnet-link'
+  location: 'global'
+  parent: cognitiveDnsZone
+  properties: {
+    virtualNetwork: {
+      id: virtualNetworkId
+    }
+    registrationEnabled: false
+  }
 }
 
 resource cosmosDbDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
@@ -625,9 +740,35 @@ resource cosmosDbDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (de
   location: 'global'
 }
 
+// VNet Link for Cosmos DB DNS Zone
+resource cosmosDbDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'cosmos-db-dns-vnet-link'
+  location: 'global'
+  parent: cosmosDbDnsZone
+  properties: {
+    virtualNetwork: {
+      id: virtualNetworkId
+    }
+    registrationEnabled: false
+  }
+}
+
 resource storageDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
   name: 'privatelink.blob.core.windows.net'
   location: 'global'
+}
+
+// VNet Link for Storage DNS Zone
+resource storageDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'storage-dns-vnet-link'
+  location: 'global'
+  parent: storageDnsZone
+  properties: {
+    virtualNetwork: {
+      id: virtualNetworkId
+    }
+    registrationEnabled: false
+  }
 }
 
 resource searchDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
@@ -635,15 +776,55 @@ resource searchDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (depl
   location: 'global'
 }
 
+// VNet Link for Search DNS Zone
+resource searchDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'search-dns-vnet-link'
+  location: 'global'
+  parent: searchDnsZone
+  properties: {
+    virtualNetwork: {
+      id: virtualNetworkId
+    }
+    registrationEnabled: false
+  }
+}
+
 resource speechDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
   name: 'privatelink.speech.azure.com'
   location: 'global'
+}
+
+// VNet Link for Speech DNS Zone
+resource speechDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'speech-dns-vnet-link'
+  location: 'global'
+  parent: speechDnsZone
+  properties: {
+    virtualNetwork: {
+      id: virtualNetworkId
+    }
+    registrationEnabled: false
+  }
 }
 
 resource keyVaultDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
   name: 'privatelink.vaultcore.azure.net'
   location: 'global'
 }
+
+// VNet Link for Key Vault DNS Zone
+resource keyVaultDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'keyvault-dns-vnet-link'
+  location: 'global'
+  parent: keyVaultDnsZone
+  properties: {
+    virtualNetwork: {
+      id: virtualNetworkId
+    }
+    registrationEnabled: false
+  }
+}
+
 
 // Module Calls for Private Endpoints and DNS Records
 
