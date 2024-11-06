@@ -359,10 +359,19 @@ export const EnsureIndexIsCreated = async (): Promise<
       status: "OK",
       response: result,
     };
-  } catch (e) {
+  } catch (e: any) {
+    console.error("Error in EnsureIndexIsCreated:", {
+      message: e.message,
+      name: e.name,
+      statusCode: e.statusCode,
+      requestId: e.requestId,
+      responseBody: e?.response?.bodyAsText || e?.response?.body || '',
+    });
+
     return await CreateSearchIndex();
   }
 };
+
 
 const CreateSearchIndex = async (): Promise<
   ServerActionResponse<SearchIndex>
