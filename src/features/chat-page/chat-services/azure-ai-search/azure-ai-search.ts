@@ -360,6 +360,7 @@ export const EnsureIndexIsCreated = async (): Promise<
       response: result,
     };
   } catch (e: any) {
+    console.log(e);
     console.error("Error in EnsureIndexIsCreated:", {
       message: e.message,
       name: e.name,

@@ -13,47 +13,94 @@ const searchName = process.env.AZURE_SEARCH_NAME;
 const indexName = process.env.AZURE_SEARCH_INDEX_NAME;
 const endpoint = `https://${searchName}.${endpointSuffix}`;
 
+const logSetup = () => {
+  console.log({
+    USE_MANAGED_IDENTITIES,
+    endpointSuffix,
+    apiKey: USE_MANAGED_IDENTITIES ? "Using Managed Identity" : "API Key Set",
+    searchName,
+    indexName,
+    endpoint,
+  });
+};
 
 export const GetCredential = () => {
-  return USE_MANAGED_IDENTITIES
-    ? new DefaultAzureCredential()
-    : new AzureKeyCredential(apiKey);
-}
+  logSetup(); // Log the setup configuration
+
+  try {
+    const credential = USE_MANAGED_IDENTITIES
+      ? new DefaultAzureCredential()
+      : new AzureKeyCredential(apiKey);
+
+    console.log("Credential initialized:", {
+      useManagedIdentities: USE_MANAGED_IDENTITIES,
+      credentialType: USE_MANAGED_IDENTITIES ? "DefaultAzureCredential" : "AzureKeyCredential"
+    });
+
+    return credential;
+  } catch (error: any) {
+    console.error("Error initializing credential:", {
+      message: error.message,
+      name: error.name,
+    });
+    throw error;
+  }
+};
 
 export const AzureAISearchInstance = <T extends object>() => {
   const credential = GetCredential();
 
-  const searchClient = new SearchClient<T>(
-    endpoint,
-    indexName,
-    credential
-  );
-
-  return searchClient;
-
-
+  try {
+    const searchClient = new SearchClient<T>(
+      endpoint,
+      indexName,
+      credential
+    );
+    console.log("AzureAI SearchClient created successfully");
+    return searchClient;
+  } catch (error: any) {
+    console.error("Error creating AzureAI SearchClient:", {
+      message: error.message,
+      name: error.name,
+    });
+    throw error;
+  }
 };
 
 export const AzureAISearchIndexClientInstance = () => {
-
   const credential = GetCredential();
 
-  const searchClient = new SearchIndexClient(
-    endpoint,
-    credential
-  );
-
-  return searchClient;
+  try {
+    const searchClient = new SearchIndexClient(
+      endpoint,
+      credential
+    );
+    console.log("AzureAI SearchIndexClient created successfully");
+    return searchClient;
+  } catch (error: any) {
+    console.error("Error creating AzureAI SearchIndexClient:", {
+      message: error.message,
+      name: error.name,
+    });
+    throw error;
+  }
 };
 
 export const AzureAISearchIndexerClientInstance = () => {
-
   const credential = GetCredential();
 
-  const client = new SearchIndexerClient(
-    endpoint,
-    credential
-  );
-
-  return client;
+  try {
+    const client = new SearchIndexerClient(
+      endpoint,
+      credential
+    );
+    console.log("AzureAI SearchIndexerClient created successfully");
+    return client;
+  } catch (error: any) {
+    console.error("Error creating AzureAI SearchIndexerClient:", {
+      message: error.message,
+      name: error.name,
+    });
+    throw error;
+  }
 };
