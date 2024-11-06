@@ -735,6 +735,23 @@ resource cognitiveDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetw
   }
 }
 
+// Add the OpenAI DNS Zone
+resource openaiDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'privatelink.openai.azure.com'
+  location: 'global'
+}
+
+// VNet Link for OpenAI DNS Zone
+resource openaiDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (deployOtherResourcesPE) {
+  name: 'openai-dns-vnet-link'
+  location: 'global'
+  parent: openaiDnsZone
+  properties: {
+    virtualNetwork: { id: virtualNetworkId }
+    registrationEnabled: false
+  }
+}
+
 resource cosmosDbDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = if (deployOtherResourcesPE) {
   name: 'privatelink.documents.azure.com'
   location: 'global'
@@ -836,9 +853,10 @@ module openaiPrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherR
     serviceId: azureopenai.id
     subnetId: privateEndpointSubnetId
     groupId: 'account'
-    dnsZoneName: 'privatelink.cognitiveservices.azure.com'
+    dnsZoneName: 'privatelink.openai.azure.com'
    
   }
+  dependsOn: [cognitiveDnsZoneVnetLink, openaiDnsZoneVnetLink]
 }
 
 module openaDalleiPrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {
@@ -849,9 +867,10 @@ module openaDalleiPrivateEndpoint './privateEndpointWithDns.bicep' = if (deployO
     serviceId: azureopenai.id
     subnetId: privateEndpointSubnetId
     groupId: 'account'
-    dnsZoneName: 'privatelink.cognitiveservices.azure.com'
+    dnsZoneName:  'privatelink.openai.azure.com'
    
   }
+  dependsOn: [cognitiveDnsZoneVnetLink, openaiDnsZoneVnetLink]
 }
 
 module cosmosDbPrivateEndpoint './privateEndpointWithDns.bicep' = if (deployOtherResourcesPE) {

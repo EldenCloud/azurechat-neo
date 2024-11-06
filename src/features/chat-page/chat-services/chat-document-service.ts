@@ -21,13 +21,20 @@ export const CrackDocument = async (
   formData: FormData
 ): Promise<ServerActionResponse<string[]>> => {
   try {
+    console.log("Starting CrackDocument function");
+    
     const response = await EnsureIndexIsCreated();
+    console.log("EnsureIndexIsCreated response:", response);
+
     if (response.status === "OK") {
       const fileResponse = await LoadFile(formData);
+      console.log("LoadFile response:", fileResponse);
+
       if (fileResponse.status === "OK") {
         const splitDocuments = await ChunkDocumentWithOverlap(
           fileResponse.response.join("\n")
         );
+        console.log("Split documents:", splitDocuments);
 
         return {
           status: "OK",
@@ -40,6 +47,7 @@ export const CrackDocument = async (
 
     return response;
   } catch (e) {
+    console.error("Error in CrackDocument:", e);
     return {
       status: "ERROR",
       errors: [
@@ -55,22 +63,28 @@ const LoadFile = async (
   formData: FormData
 ): Promise<ServerActionResponse<string[]>> => {
   try {
+    console.log("Starting LoadFile function");
+
     const file: File | null = formData.get("file") as unknown as File;
+    console.log("Loaded file:", file);
 
     const fileSize = process.env.MAX_UPLOAD_DOCUMENT_SIZE
       ? Number(process.env.MAX_UPLOAD_DOCUMENT_SIZE)
       : MAX_UPLOAD_DOCUMENT_SIZE;
+    console.log("Maximum allowed file size:", fileSize);
 
     if (file && file.size < fileSize) {
       const client = DocumentIntelligenceInstance();
-
       const blob = new Blob([file], { type: file.type });
 
       const poller = await client.beginAnalyzeDocument(
         "prebuilt-read",
         await blob.arrayBuffer()
       );
+      console.log("Poller created");
+
       const { paragraphs } = await poller.pollUntilDone();
+      console.log("Analyzed paragraphs:", paragraphs);
 
       const docs: Array<string> = [];
 
@@ -79,12 +93,14 @@ const LoadFile = async (
           docs.push(paragraph.content);
         }
       }
+      console.log("Document content:", docs);
 
       return {
         status: "OK",
         response: docs,
       };
     } else {
+      console.warn("File is too large");
       return {
         status: "ERROR",
         errors: [
@@ -95,6 +111,7 @@ const LoadFile = async (
       };
     }
   } catch (e) {
+    console.error("Error in LoadFile:", e);
     return {
       status: "ERROR",
       errors: [
@@ -110,6 +127,8 @@ export const FindAllChatDocuments = async (
   chatThreadID: string
 ): Promise<ServerActionResponse<ChatDocumentModel[]>> => {
   try {
+    console.log("Finding all chat documents for thread ID:", chatThreadID);
+    
     const querySpec: SqlQuerySpec = {
       query:
         "SELECT * FROM root r WHERE r.type=@type AND r.chatThreadId = @threadId AND r.isDeleted=@isDeleted",
@@ -132,6 +151,7 @@ export const FindAllChatDocuments = async (
     const { resources } = await HistoryContainer()
       .items.query<ChatDocumentModel>(querySpec)
       .fetchAll();
+    console.log("Query result:", resources);
 
     if (resources) {
       return {
@@ -139,6 +159,7 @@ export const FindAllChatDocuments = async (
         response: resources,
       };
     } else {
+      console.warn("No documents found");
       return {
         status: "ERROR",
         errors: [
@@ -149,6 +170,7 @@ export const FindAllChatDocuments = async (
       };
     }
   } catch (e) {
+    console.error("Error in FindAllChatDocuments:", e);
     return {
       status: "ERROR",
       errors: [
@@ -165,6 +187,8 @@ export const CreateChatDocument = async (
   chatThreadID: string
 ): Promise<ServerActionResponse<ChatDocumentModel>> => {
   try {
+    console.log("Creating new chat document with file name:", fileName);
+    
     const modelToSave: ChatDocumentModel = {
       chatThreadId: chatThreadID,
       id: uniqueId(),
@@ -177,6 +201,8 @@ export const CreateChatDocument = async (
 
     const { resource } =
       await HistoryContainer().items.upsert<ChatDocumentModel>(modelToSave);
+    console.log("Upserted document:", resource);
+
     RevalidateCache({
       page: "chat",
       params: chatThreadID,
@@ -189,6 +215,7 @@ export const CreateChatDocument = async (
       };
     }
 
+    console.warn("Unable to save chat document");
     return {
       status: "ERROR",
       errors: [
@@ -198,6 +225,7 @@ export const CreateChatDocument = async (
       ],
     };
   } catch (e) {
+    console.error("Error in CreateChatDocument:", e);
     return {
       status: "ERROR",
       errors: [
@@ -212,17 +240,16 @@ export const CreateChatDocument = async (
 export async function ChunkDocumentWithOverlap(
   document: string
 ): Promise<string[]> {
+  console.log("Chunking document with overlap");
   const chunks: string[] = [];
 
   if (document.length <= CHUNK_SIZE) {
-    // If the document is smaller than the desired chunk size, return it as a single chunk.
     chunks.push(document);
     return chunks;
   }
 
   let startIndex = 0;
 
-  // Split the document into chunks of the desired size, with overlap.
   while (startIndex < document.length) {
     const endIndex = startIndex + CHUNK_SIZE;
     const chunk = document.substring(startIndex, endIndex);
@@ -230,5 +257,6 @@ export async function ChunkDocumentWithOverlap(
     startIndex = endIndex - CHUNK_OVERLAP;
   }
 
+  console.log("Chunks created:", chunks.length);
   return chunks;
 }
